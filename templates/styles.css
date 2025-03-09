@@ -1,0 +1,98 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #121212; /* Dark background */
+    color: #e0e0e0; /* Light text */
+    margin: 0;
+    padding: 20px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+h1 {
+    color: #64b5f6; /* Vibrant blue for headings */
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.controls {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 30px;
+}
+
+.controls button,
+.controls select,
+.controls label {
+    margin: 10px;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    background-color: #37474f; /* Dark gray for controls */
+    color: #e0e0e0;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.controls button:hover,
+.controls select:hover {
+    background-color: #546e7a; /* Lighter gray on hover */
+}
+
+#metricSelect,
+#chartTypeSelect {
+    width: 150px;
+}
+
+#metricChart {
+    background-color: #1e1e1e; /* Slightly lighter dark for chart background */
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+    margin-bottom: 30px;
+}
+
+.stats {
+    background-color: #1e1e1e;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+    text-align: center;
+}
+
+.stats h2 {
+    color: #66bb6a; /* Vibrant green for stats headings */
+    margin-bottom: 20px;
+}
+
+.stats p {
+    margin: 8px 0;
+    font-size: 1.1em;
+}
+
+/* Theme Toggle */
+.light-theme {
+    background-color: #f0f0f0;
+    color: #333;
+}
+
+.light-theme #metricChart,
+.light-theme .stats {
+    background-color: #fff;
+}
+
+/* Animations */
+button, select {
+  transition: transform 0.2s ease-in-out;
+}
+
+button:active, select:active {
+  transform: scale(0.95);
+}
+
+/*Responsive Design*/
+@media (max-width: 768px) {
+  .controls {
+    flex-direction: column;
+    align-items: center;
+  }
+}

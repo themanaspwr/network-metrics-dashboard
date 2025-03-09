@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Network Metrics Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+        }
+        .controls {
+            margin-bottom: 20px;
+        }
+        .stats {
+            margin-top: 20px;
+        }
+        label {
+            margin-right: 10px;
+        }
+        button {
+            margin-right: 10px;
+        }
+        .dark-theme {
+            background-color: #333;
+            color: #eee;
+        }
+        .dark-theme canvas {
+            background-color: #444;
+        }
+    </style>
+</head>
+<body>
+    <h1>Network Metrics Dashboard</h1>
+
+    <div class="controls">
+        <button id="themeToggle">Toggle Theme</button>
+        <button id="exportCSV">Export CSV</button>
+        <button id="exportJSON">Export JSON</button>
+        <button id="downloadChart">Download Chart</button>
+    </div>
+
+    <div class="controls">
+        <label for="metricSelect">Select Metric:</label>
+        <select id="metricSelect">
+            <option value="packet_loss">Packet Loss</option>
+            <option value="latency">Latency</option>
+            <option value="packet_gain">Packet Gain</option>
+        </select>
+
+        <label for="chartTypeSelect">Select Chart Type:</label>
+        <select id="chartTypeSelect">
+            <option value="line">Line</option>
+            <option value="bar">Bar</option>
+            <option value="scatter">Scatter</option>
+        </select>
+    </div>
+
+    <canvas id="metricChart"></canvas>
+
+    <div id="stats" class="stats">
+        <h2>Summary Statistics</h2>
+        <p>Average: <span id="average"></span></p>
+        <p>Standard Deviation: <span id="stddev"></span></p>
+        <p>Minimum: <span id="min"></span></p>
+        <p>Maximum: <span id="max"></span></p>
+    </div>
+
+    <script>
+        // Get chart context and elements
+        const metricCtx = document.getElementById('metricChart').getContext('2d');
+        const metricSelect = document.getElementById('metricSelect');
+        const chartTypeSelect = document.getElementById('chartTypeSelect');
+        const maxDataPoints = 20;
+        const themeToggle = document.getElementById('themeToggle');
+        const exportCSVButton = document.getElementById('exportCSV');
+        const exportJSONButton = document.getElementById('exportJSON');
+        const downloadChartButton = document.getElementById('downloadChart');
+        let isDarkTheme = false;
+        let chartData = []; // Store fetched data for export
+
+        // Initialize Chart.js chart
+        let metricChart = new Chart(metricCtx, {
+            type: chartTypeSelect.value,
+            data: { labels: [], datasets: [{ label: '', data: [], borderColor: 'blue', fill: false }] },
+            options: {
+                responsive: true,
+                scales: {
+                    x: {
+                        ticks: {
+                            maxTicksLimit: 10
+                        },
+                        title: {
+                            display: true,
+                            text: 'Time'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: ''
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                },
+                title: {
+                  display: true,
+                  text: 'Network Metrics'
+                },
+                legend: {
+                    display: true,
+                    position: 'top'
+                }
+            }
+        });
+
+        function updateChart() {
+            const selectedMetric = metricSelect.value;
+            const selectedChartType = chartTypeSelect.value;
+            let label, borderColor, dataKey, yAxisLabel;
+
+            if (selectedMetric === 'packet_loss') {
+                label = 'Packet Loss';
+                borderColor = 'red';
+                dataKey = 'packet_loss';
+                yAxisLabel = 'Packet Loss (%)';
+            } else if (selectedMetric === 'latency') {
+                label = 'Latency';
+                borderColor = 'blue';
+                dataKey = 'latency';
+                yAxisLabel = 'Latency (ms)';
+            } else if (selectedMetric === 'packet_gain') {
+                label = 'Packet Gain';
+                borderColor = 'green';
+                dataKey = 'packet_gain';
+                yAxisLabel = 'Packet Gain';
+            } 
+
+            fetch('/data')
+                .then(response => response.json())
+                .then(responseData => {
+                    const data = responseData.data;
+                    const stats = responseData.stats[selectedMetric];
+
+                    chartData = data;
+
+                    const timestamps = data.map(item => new Date(item.timestamp * 1000).toLocaleTimeString());
+                    const metricData = data.map(item => item[dataKey]);
+
+                    const limitedTimestamps = timestamps.slice(-maxDataPoints);
+                    const limitedMetricData = metricData.slice(-maxDataPoints);
+
+                    metricChart.data.labels = limitedTimestamps;
+                    metricChart.data.datasets[0].label = label;
+                    metricChart.data.datasets[0].borderColor = borderColor;
+                    metricChart.data.datasets[0].data = limitedMetricData;
+                    metricChart.options.scales.y.title.text = yAxisLabel;
+
+                    if (metricChart.config.type !== selectedChartType) {
+                        metricChart.config.type = selectedChartType;
+                        metricChart.data.datasets[0].backgroundColor = borderColor;
+                        metricChart.data.datasets[0].pointRadius = 5;
+                    }
+
+                    metricChart.update();
+
+                    document.getElementById('average').textContent = stats.average.toFixed(2);
+                    document.getElementById('stddev').textContent = stats.stddev.toFixed(2);
+                    document.getElementById('min').textContent = stats.min.toFixed(2);
+                    document.getElementById('max').textContent = stats.max.toFixed(2);
+                });
+        }
+
+        function exportCSV() {
+            if (chartData.length === 0) return;
+            const header = Object.keys(chartData[0]).join(',');
+            const rows = chartData.map(row => Object.values(row).join(',')).join('\n');
+            const csv = `<span class="math-inline">\{header\}\\n</span>{rows}`;
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'data.csv';
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        function exportJSON() {
+            if (chartData.length === 0) return;
+            const json = JSON.stringify(chartData, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'data.json';
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        function downloadChart() {
+            const image = metricChart.toBase64Image();
+            const a = document.createElement('a');
+            a.href = image;
+            a.download = 'chart.png';
+            a.click();
+        }
+
+        exportCSVButton.addEventListener('click', exportCSV);
+        exportJSONButton.addEventListener('click', exportJSON);
+        downloadChartButton.addEventListener('click', downloadChart);
+
+        metricSelect.addEventListener('change', updateChart);
+        chartTypeSelect.addEventListener('change', updateChart);
+        setInterval(updateChart, 1000);
+        updateChart();
+
+        themeToggle.addEventListener('click', () => {
+            isDarkTheme = !isDarkTheme;
+            document.body.classList.toggle('dark-theme', isDarkTheme);
+        });
+    </script>
+</body>
+</html>
